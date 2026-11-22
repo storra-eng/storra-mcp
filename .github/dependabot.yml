@@ -1,0 +1,29 @@
+# Dependabot version updates.
+#
+# Scope note: this file controls version-update PRs only. SECURITY alerts are a
+# repo-settings toggle (Settings > Code security), not something configured here -
+# so nothing in this file can turn the alert banner on or off.
+#
+# repo-initialise adds an entry per dependency ecosystem the repo has (npm, pip, gomod...), copying this
+# block's settings, and deletes the file when the repo has no dependencies and no workflows.
+#
+# cooldown: a version must be at least 7 days old before Dependabot raises an
+# update for it - the freshly-released supply-chain attack window. Security
+# updates ignore the cooldown regardless.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(ci)
+    assignees:
+      - "echarrod"
+    groups:
+      actions:
+        patterns: ["*"]

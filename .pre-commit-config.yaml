@@ -1,0 +1,24 @@
+# Install once per clone (worktrees share it): `pre-commit install`
+# Stdlib-only hooks live in scripts/; add language-specific hooks below as the repo grows.
+# gitleaks and actionlint are built by pre-commit itself (language: golang), so neither needs installing first.
+repos:
+  # Blocks new or growing files over 5,000 tokens; see scripts/check-file-token-budget.py.
+  - repo: local
+    hooks:
+      - id: file-token-budget
+        name: block files over 5,000 tokens
+        entry: scripts/check-file-token-budget.py
+        language: script
+        always_run: true
+        pass_filenames: false
+  # Blocks a commit whose staged diff contains a secret. False positive: add its fingerprint to .gitleaksignore.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  # Lints GitHub Actions workflows; runs only when a file under .github/workflows/ is staged.
+  # Runner labels it does not know (blacksmith-*) go in .github/actionlint.yaml.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint

@@ -1,0 +1,11 @@
+# Team defaults for `git gtr` (gitconfig syntax). Committed so every checkout creates worktrees the same way.
+#
+# NOTE THE KEY NAMES. Inside .gtrconfig the schema is `copy.*` / `hooks.*` / `defaults.*` / `worktrees.*` - NOT the
+# `gtr.copy.*` / `gtr.hook.*` names the CLI uses for git config. A config with no `hooks.*` entries is trusted
+# automatically; after adding a hook, commit it and run `git gtr trust` once per machine, or it is skipped silently.
+#
+# repo-initialise adds the repo's other gitignored files a worktree cannot work without (`.env.local`, `.env`).
+
+[copy]
+	# Per-machine Claude Code settings (MCP server enablement).
+	include = .claude/settings.local.json
