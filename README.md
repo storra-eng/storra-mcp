@@ -1,39 +1,132 @@
-# storra-eng repository template
+# Storra MCP servers
 
-This private GitHub template is the starting point for new internal
-`storra-eng` repositories. It supplies the organisation's GitHub merge policy
-and Claude Code baseline without selecting a language, framework, CI pipeline,
-or deployment platform.
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/storra-eng/storra-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/storra-eng/storra-mcp/actions/workflows/ci.yml)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-com.getstorra-blue)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.getstorra)
+[![Glama: Storra for Creators](https://img.shields.io/badge/Glama-Storra_for_Creators-6b46c1)](https://glama.ai/mcp/connectors/com.getstorra/creators)
+[![Glama: Storra for Brands](https://img.shields.io/badge/Glama-Storra_for_Brands-6b46c1)](https://glama.ai/mcp/connectors/com.getstorra/brands)
+
+Find real charity stories for a creator to tell or a brand to fund, from any AI assistant that speaks MCP.
+[Storra](https://getstorra.com) lists real charity stories that brands fund, creators tell and charities make real.
+These two servers let an assistant search those stories and read one in full, with a link to its page.
+
+- **Free, read-only, no sign-in.** Every story they return is already public on getstorra.com.
+- **Hosted for you.** Add a URL below; there is nothing to install or run.
+- Setup for every assistant: [getstorra.com/ai](https://getstorra.com/ai).
 
 Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Create a repository
+## Servers
 
-1. From `~/dev/storra-eng`, create and clone the repository from this template:
-   `gh repo create storra-eng/<name> --private --template storra-eng/repo-template --description "<one-liner>" --clone`.
-   The `dev-loop:new-github-repo` skill does this and then runs step 3 for you; step 2 still applies.
-2. Open Claude Code in the clone and trust the folder when prompted. Trusting it registers the shared `storra`
-   plugin marketplace and installs the plugins below.
-3. Run `/dev-loop:repo-initialise "<one-liner>"`. It sets the commit email, applies the GitHub merge policy
-   (`scripts/configure-github-repository.sh`), fills in the `[Repository name]` placeholder in `CLAUDE.md`,
-   rewrites this README for the new repository, installs the git hooks for its language, enables
-   `database@storra` if needed, configures the cross-repo baseline (Dependabot, `.gtrconfig`, Tessl and the
-   bot-PR assignee where they apply), lists the repository in the org profile, and makes the first commit.
+| Server | URL | For |
+|---|---|---|
+| Storra for Creators | `https://mcp.getstorra.com/creators` | Creators looking for a story to make a video or post about |
+| Storra for Brands | `https://mcp.getstorra.com/brands` | Brands looking for a story to fund as a cause-marketing campaign |
 
-## Included baseline
+Transport: streamable HTTP, stateless, JSON responses. Authentication: none.
 
-- `CONTRIBUTING.md` is the developer-docs skeleton (setup, tests, hooks, landing) that the init skill fills in.
-- `CLAUDE.md` is the canonical repository guidance; `AGENTS.md` is its symlink.
-- `.claude/rules/` contains focused guidance for agent instructions, GitHub
-  automation, and documentation.
-- `.pre-commit-config.yaml` runs the file-size check, gitleaks on the staged diff, and actionlint on workflows.
-- `.github/dependabot.yml` updates GitHub Actions monthly; the init skill adds the repo's own ecosystems.
-- `.gtrconfig` copies `.claude/settings.local.json` into each `git gtr` worktree; the init skill adds `.env` files.
-- `.claude/settings.json` registers `storra-eng/claude-plugins` and enables the
-  shared development, standards, operations, integrations, and Herdr plugins.
+## Install
 
-## Add only when needed
+### Claude
 
-Choose a runtime, dependency manager, test suite, CI workflows, deployment
-configuration, language-specific hooks, and project-specific Claude rules for the new
-repository. Enable `database@storra` only for repositories that use a database.
+**Claude.ai and Claude Desktop:** Settings, Connectors, Add custom connector. Paste a server URL. No sign-in needed.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http storra-creators https://mcp.getstorra.com/creators
+claude mcp add --transport http storra-brands https://mcp.getstorra.com/brands
+```
+
+### ChatGPT
+
+Settings, Apps. Turn on developer mode, add a new app, paste a server URL and choose no authentication.
+
+### Cursor
+
+[Add Storra for Creators to Cursor](https://cursor.com/en/install-mcp?name=storra-creators&config=eyJ1cmwiOiJodHRwczovL21jcC5nZXRzdG9ycmEuY29tL2NyZWF0b3JzP3NyYz1naXRodWIifQ%3D%3D) ·
+[Add Storra for Brands to Cursor](https://cursor.com/en/install-mcp?name=storra-brands&config=eyJ1cmwiOiJodHRwczovL21jcC5nZXRzdG9ycmEuY29tL2JyYW5kcz9zcmM9Z2l0aHViIn0%3D)
+
+Or add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "storra-creators": { "url": "https://mcp.getstorra.com/creators" },
+    "storra-brands": { "url": "https://mcp.getstorra.com/brands" }
+  }
+}
+```
+
+### VS Code
+
+[Add Storra for Creators to VS Code](https://vscode.dev/redirect/mcp/install?name=storra-creators&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//mcp.getstorra.com/creators%3Fsrc%3Dgithub%22%7D) ·
+[Add Storra for Brands to VS Code](https://vscode.dev/redirect/mcp/install?name=storra-brands&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A//mcp.getstorra.com/brands%3Fsrc%3Dgithub%22%7D)
+
+Or add to `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "storra-creators": { "type": "http", "url": "https://mcp.getstorra.com/creators" },
+    "storra-brands": { "type": "http", "url": "https://mcp.getstorra.com/brands" }
+  }
+}
+```
+
+### Other assistants
+
+Grok, Gemini, Perplexity, Microsoft Copilot Studio and others: wherever the app lets you add a custom MCP server or
+connector, paste a server URL and choose no authentication. Per-assistant steps: [getstorra.com/ai](https://getstorra.com/ai).
+
+## Tools
+
+Every tool is read-only (`readOnlyHint: true`, `destructiveHint: false`) and has a title.
+
+| Server | Tool | What it does |
+|---|---|---|
+| Creators | `search_stories_to_tell` | Search stories by words, cause, place or category. Returns the best matches with a link to each story page. |
+| Creators | `get_story` | One story in full: the story, where you could take it, the support on offer, and the charity's details. |
+| Brands | `find_campaign_stories` | Search stories by words, cause or place. Returns the best matches with a link to each story page. |
+| Brands | `get_campaign_story` | One story in full: the story, what a brand could do with it, and the charity's details. |
+| Both | `list_causes` | The causes stories are filed under, with how many stories each has. |
+
+Search results return at most 25 stories (10 by default).
+
+Try asking:
+
+- "Find charity stories I could make content about in Leeds."
+- "Find campaign stories a UK coffee brand could fund about children."
+- "Which causes have stories?"
+
+## Limits and data
+
+| | |
+|---|---|
+| Rate limit | 60 requests a minute per IP address. Over it, the server answers HTTP 429 with `Retry-After: 60`. |
+| Data | Storra's public story export on `cdn.getstorra.com`. A change to it reaches tool answers within about 90 seconds. |
+| Privacy | No account, no cookies, no conversation data stored. See [getstorra.com/privacy](https://getstorra.com/privacy). |
+
+## Run it yourself
+
+The hosted servers run this code on Cloudflare Workers. To run your own copy (Node 20 or later):
+
+```bash
+npm ci
+npm run dev
+curl -s -X POST http://localhost:8787/creators -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+It reads the same public story export as the hosted servers.
+
+## Links
+
+- Docs and setup: [getstorra.com/ai](https://getstorra.com/ai)
+- For AI agents: [getstorra.com/llms.txt](https://getstorra.com/llms.txt)
+- Examples (a Claude Code plugin and an example agent): [storra-eng/storra-mcp-examples](https://github.com/storra-eng/storra-mcp-examples)
+- Support: [getstorra.com/contact](https://getstorra.com/contact)
+
+## License
+
+[MIT](LICENSE)

@@ -1,0 +1,6 @@
+# Runs the two story servers locally: `npm run dev`, then POST to http://localhost:8787/creators or /brands.
+name = "storra-mcp"
+main = "src/worker.js"
+compatibility_date = "2026-08-13"
+# The MCP SDK imports a few Node built-ins even on its web-standard path.
+compatibility_flags = ["nodejs_compat"]

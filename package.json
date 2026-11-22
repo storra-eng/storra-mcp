@@ -1,0 +1,27 @@
+{
+  "name": "storra-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Storra's anonymous MCP servers: search real charity stories a creator could tell or a brand could fund. Read-only, no sign-in.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/storra-eng/storra-mcp.git"
+  },
+  "homepage": "https://getstorra.com/ai",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "4.1.1",
+    "@modelcontextprotocol/sdk": "1.32.1"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.1.12",
+    "wrangler": "4.151.1"
+  }
+}

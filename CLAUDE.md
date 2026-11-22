@@ -1,9 +1,15 @@
-# [Repository name]
+# storra-mcp
 
-Replace this short description with what this repository owns, its users, and the
-systems it integrates with. Keep this file focused on repository-wide decisions;
-put path-specific instructions in `.claude/rules/` and reusable procedures in
-skills.
+**Public repo (MIT).** Storra's two anonymous, read-only MCP servers ("Storra for Creators", "Storra for Brands"),
+served at `mcp.getstorra.com/creators` and `/brands`. They answer from the public story export on `cdn.getstorra.com`.
+
+- **This repo is the source of truth.** The private `storra` repo vendors `src/` byte-for-byte into
+  `cloudflare/mcp-proxy/vendor/storra-mcp/` at a pinned commit, with a drift check, and deploys it from there. Change
+  the code here, land it, then sync and deploy from `storra` (see CONTRIBUTING.md).
+- **Everything here is public.** Never commit internal hostnames, project refs, issue keys, admin-only fields,
+  secrets, or where a story was sourced from. The export's field allowlist (in `storra`) decides what a story carries;
+  `detail()` in `src/tools.ts` passes through every field except a short denylist, so it is not the control.
+- README is directory listing copy (mcp.pub, Glama, mcpmarket read it): no em dashes, keep URLs and the tool list true.
 
 ## Agent instructions
 
