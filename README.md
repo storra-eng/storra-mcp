@@ -34,8 +34,8 @@ Transport: streamable HTTP, stateless, JSON responses. Authentication: none.
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http storra-creators https://mcp.getstorra.com/creators
-claude mcp add --transport http storra-brands https://mcp.getstorra.com/brands
+claude mcp add --transport http storra-creators 'https://mcp.getstorra.com/creators?src=github'
+claude mcp add --transport http storra-brands 'https://mcp.getstorra.com/brands?src=github'
 ```
 
 **Claude Code plugin** (both servers plus a `cause-campaign` skill):
@@ -61,8 +61,8 @@ Or add to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "storra-creators": { "url": "https://mcp.getstorra.com/creators" },
-    "storra-brands": { "url": "https://mcp.getstorra.com/brands" }
+    "storra-creators": { "url": "https://mcp.getstorra.com/creators?src=github" },
+    "storra-brands": { "url": "https://mcp.getstorra.com/brands?src=github" }
   }
 }
 ```
@@ -77,8 +77,8 @@ Or add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "storra-creators": { "type": "http", "url": "https://mcp.getstorra.com/creators" },
-    "storra-brands": { "type": "http", "url": "https://mcp.getstorra.com/brands" }
+    "storra-creators": { "type": "http", "url": "https://mcp.getstorra.com/creators?src=github" },
+    "storra-brands": { "type": "http", "url": "https://mcp.getstorra.com/brands?src=github" }
   }
 }
 ```

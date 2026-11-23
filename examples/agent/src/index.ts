@@ -12,7 +12,7 @@ interface Story {
   slug: string;
   url: string;
   title: string;
-  summary: string;
+  summary: string | null;
   charity: string | null;
   location: string | null;
   cause: string | null;
@@ -22,6 +22,8 @@ interface Story {
 function parse<T>(result: Awaited<ReturnType<Client["callTool"]>>): T {
   const block = (result.content as { type: string; text?: string }[])[0];
   if (block?.type !== "text" || !block.text) throw new Error("Unexpected tool result");
+  // An error result carries the server's message as plain text, not JSON.
+  if (result.isError) throw new Error(block.text);
   return JSON.parse(block.text) as T;
 }
 
@@ -37,7 +39,14 @@ async function main() {
   const args: Record<string, unknown> = { limit: 5 };
   for (let i = 0; i < words.length; i++) {
     if (words[i] === "--location") args.location = words[++i];
-    else if (words[i] === "--limit") args.limit = Number(words[++i]);
+    else if (words[i] === "--limit") {
+      const limit = Number(words[++i]);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 25) {
+        console.error("--limit takes a whole number from 1 to 25.");
+        process.exit(64);
+      }
+      args.limit = limit;
+    }
     else query.push(words[i]);
   }
   args.query = query.join(" ");
@@ -56,7 +65,7 @@ async function main() {
     for (const [i, story] of found.stories.entries()) {
       console.log(`${i + 1}. ${story.title}`);
       console.log(`   ${[story.charity, story.location, story.cause].filter(Boolean).join(" | ")}`);
-      console.log(`   ${story.summary}`);
+      if (story.summary) console.log(`   ${story.summary}`);
       console.log(`   ${story.url}\n`);
     }
 

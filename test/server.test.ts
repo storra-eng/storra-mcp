@@ -41,6 +41,17 @@ describe("worker", () => {
     expect(res.headers.get("retry-after")).toBe("60");
   });
 
+  it("records a rate-limited call with its listing tag, like every other call", async () => {
+    const points: { blobs: string[] }[] = [];
+    const env = {
+      MCP_LIMITER: { limit: async () => ({ success: false }) },
+      MCP_ANALYTICS: { writeDataPoint: (p: { blobs: string[] }) => points.push(p) },
+    };
+    await worker.fetch(post("/creators?src=glama", "tools/list"), env);
+    expect(points).toHaveLength(1);
+    expect(points[0].blobs).toEqual(["rate_limited", "", "", "rate_limited", "glama"]);
+  });
+
   it("404s any other path", async () => {
     const res = await worker.fetch(post("/other", "tools/list"), {});
     expect(res.status).toBe(404);

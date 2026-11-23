@@ -13,7 +13,7 @@ export const MCP_AUDIENCES: readonly McpAudience[] = ["creators", "brands"];
 export const SITE_ORIGIN = "https://getstorra.com";
 export const MCP_ORIGIN = "https://mcp.getstorra.com";
 export const FEED_CDN_ORIGIN = "https://cdn.getstorra.com";
-export const MCP_SERVER_VERSION = "1.0.0";
+export const MCP_SERVER_VERSION = "1.0.1";
 
 export interface McpAudienceConfig {
   audience: McpAudience;
