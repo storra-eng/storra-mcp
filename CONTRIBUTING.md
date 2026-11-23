@@ -57,5 +57,5 @@ lands here, in `storra`: `node scripts/storra-mcp-vendor.mjs sync <commit>`, com
 
 | Directory | How |
 |---|---|
-| LobeHub | `lobehub/{creators,brands}/lhm.plugin.json`. Regenerate after a tool change: `npx -y @lobehub/market-cli plugin init --url 'https://mcp.getstorra.com/<audience>?src=lobehub' --dir lobehub/<audience> --force` (needs a `package.json` with a `description` in that dir while it runs), then keep `identifier` as `storra-<audience>` and the author as Storra. Publish: `lhm login`, `lhm github connect`, then `lhm plugin publish https://github.com/storra-eng/storra-mcp --dir lobehub/<audience>`. |
+| LobeHub | One listing per repo: `storra-eng-storra-mcp`, auto-indexed from this repo's README and claimed by Storra. Nothing to regenerate; it re-reads the repo. To change it by hand: `lhm login`, `lhm github connect`, then `lhm plugin update` with an `lhm.plugin.json` whose `identifier` is `storra-eng-storra-mcp`. |
 | MCP Registry | `server.json` files live in Storra's private repo; Glama lists both servers from the registry. |
