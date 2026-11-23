@@ -16,8 +16,11 @@ Developer docs for this repository. The README covers what it is and how to use 
 |---|---|
 | Full test suite | `npm test` (Vitest) |
 | Types | `npm run check` |
+| Example agent types | `cd examples/agent && npm ci && npm run check` |
+| Example agent, live | `cd examples/agent && npm start -- creators children --limit 3` |
+| Validate the plugin | `claude plugin validate .` |
 
-Run the full suite before landing a meaningful change. CI (`.github/workflows/ci.yml`) runs both on every push and PR.
+Run the full suite before landing a meaningful change. CI (`.github/workflows/ci.yml`) runs the server checks and the agent's type check on every push and PR.
 
 ## Git hooks
 

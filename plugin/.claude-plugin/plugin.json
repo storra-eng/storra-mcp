@@ -1,0 +1,17 @@
+{
+  "name": "storra",
+  "description": "Find real charity stories for a brand to fund or a creator to tell, using Storra's public MCP servers.",
+  "homepage": "https://getstorra.com/ai",
+  "repository": "https://github.com/storra-eng/storra-mcp",
+  "author": {
+    "name": "Storra",
+    "url": "https://getstorra.com"
+  },
+  "keywords": [
+    "charity",
+    "cause-marketing",
+    "mcp",
+    "creators",
+    "brands"
+  ]
+}

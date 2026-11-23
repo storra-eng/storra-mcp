@@ -38,6 +38,15 @@ claude mcp add --transport http storra-creators https://mcp.getstorra.com/creato
 claude mcp add --transport http storra-brands https://mcp.getstorra.com/brands
 ```
 
+**Claude Code plugin** (both servers plus a `cause-campaign` skill):
+
+```
+/plugin marketplace add storra-eng/storra-mcp
+/plugin install storra@storra-mcp
+```
+
+Then ask, for example: "Find charity stories a Manchester coffee chain could fund this Christmas."
+
 ### ChatGPT
 
 Settings, Apps. Turn on developer mode, add a new app, paste a server URL and choose no authentication.
@@ -107,6 +116,18 @@ Try asking:
 | Data | Storra's public story export on `cdn.getstorra.com`. A change to it reaches tool answers within about 90 seconds. |
 | Privacy | No account, no cookies, no conversation data stored. See [getstorra.com/privacy](https://getstorra.com/privacy). |
 
+## Example agent
+
+[`examples/agent`](examples/agent) connects with the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk),
+searches, prints matches with their links and reads the top one in full. Needs Node 20 or later.
+
+```bash
+cd examples/agent
+npm install
+npm start -- creators "animal rescue" --location Bristol --limit 5
+npm start -- brands "children Christmas"
+```
+
 ## Run it yourself
 
 The hosted servers run this code on Cloudflare Workers. To run your own copy (Node 20 or later):
@@ -124,7 +145,6 @@ It reads the same public story export as the hosted servers.
 
 - Docs and setup: [getstorra.com/ai](https://getstorra.com/ai)
 - For AI agents: [getstorra.com/llms.txt](https://getstorra.com/llms.txt)
-- Examples (a Claude Code plugin and an example agent): [storra-eng/storra-mcp-examples](https://github.com/storra-eng/storra-mcp-examples)
 - Support: [getstorra.com/contact](https://getstorra.com/contact)
 
 ## License
