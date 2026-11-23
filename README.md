@@ -3,8 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/storra-eng/storra-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/storra-eng/storra-mcp/actions/workflows/ci.yml)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-com.getstorra-blue)](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.getstorra)
-[![Glama: Storra for Creators](https://img.shields.io/badge/Glama-Storra_for_Creators-6b46c1)](https://glama.ai/mcp/connectors/com.getstorra/creators)
-[![Glama: Storra for Brands](https://img.shields.io/badge/Glama-Storra_for_Brands-6b46c1)](https://glama.ai/mcp/connectors/com.getstorra/brands)
+[![Storra for Creators on Glama](https://glama.ai/mcp/connectors/com.getstorra/creators/badges/score.svg)](https://glama.ai/mcp/connectors/com.getstorra/creators)
+[![Storra for Brands on Glama](https://glama.ai/mcp/connectors/com.getstorra/brands/badges/score.svg)](https://glama.ai/mcp/connectors/com.getstorra/brands)
 
 Find real charity stories for a creator to tell or a brand to fund, from any AI assistant that speaks MCP.
 [Storra](https://getstorra.com) lists real charity stories that brands fund, creators tell and charities make real.
@@ -34,8 +34,8 @@ Transport: streamable HTTP, stateless, JSON responses. Authentication: none.
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http storra-creators https://mcp.getstorra.com/creators
-claude mcp add --transport http storra-brands https://mcp.getstorra.com/brands
+claude mcp add --transport http storra-creators 'https://mcp.getstorra.com/creators?src=github'
+claude mcp add --transport http storra-brands 'https://mcp.getstorra.com/brands?src=github'
 ```
 
 **Claude Code plugin** (both servers plus a `cause-campaign` skill):
@@ -61,8 +61,8 @@ Or add to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "storra-creators": { "url": "https://mcp.getstorra.com/creators" },
-    "storra-brands": { "url": "https://mcp.getstorra.com/brands" }
+    "storra-creators": { "url": "https://mcp.getstorra.com/creators?src=github" },
+    "storra-brands": { "url": "https://mcp.getstorra.com/brands?src=github" }
   }
 }
 ```
@@ -77,8 +77,8 @@ Or add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "storra-creators": { "type": "http", "url": "https://mcp.getstorra.com/creators" },
-    "storra-brands": { "type": "http", "url": "https://mcp.getstorra.com/brands" }
+    "storra-creators": { "type": "http", "url": "https://mcp.getstorra.com/creators?src=github" },
+    "storra-brands": { "type": "http", "url": "https://mcp.getstorra.com/brands?src=github" }
   }
 }
 ```
@@ -145,6 +145,7 @@ It reads the same public story export as the hosted servers.
 
 - Docs and setup: [getstorra.com/ai](https://getstorra.com/ai)
 - For AI agents: [getstorra.com/llms.txt](https://getstorra.com/llms.txt)
+- Directory listings: [Glama: Storra for Creators](https://glama.ai/mcp/connectors/com.getstorra/creators), [Glama: Storra for Brands](https://glama.ai/mcp/connectors/com.getstorra/brands), [MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=com.getstorra)
 - Support: [getstorra.com/contact](https://getstorra.com/contact)
 
 ## License

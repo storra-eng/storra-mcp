@@ -1,0 +1,25 @@
+# Per-repo caller. Drop into each repo as .github/workflows/dependabot-auto-merge.yml.
+# All logic lives in storra-eng/agent-automation; see dependabot-auto-merge.yml there.
+#
+# Only safe alongside a ruleset on the default branch that requires CI - without
+# one, auto-merge has nothing to wait for and merges immediately.
+
+name: Dependabot auto-merge
+
+on:
+  # Never pull_request_target: that runs with write access in the context of the
+  # base branch for any fork, and nothing here needs it.
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# NOT optional - a reusable workflow may only request scopes its caller holds,
+# and a missing block fails at startup with no job, log or check run (see the
+# README gotcha). Keep in step with the callee's `permissions:`.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  call:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: storra-eng/agent-automation/.github/workflows/dependabot-auto-merge.yml@main

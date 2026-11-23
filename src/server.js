@@ -200,15 +200,7 @@ export async function serveAnonymous(request, env, audience) {
     const key = request.headers.get("cf-connecting-ip") || "unknown";
     const { success } = await env.MCP_LIMITER.limit({ key });
     if (!success) {
-      try {
-        env.MCP_ANALYTICS?.writeDataPoint({
-          indexes: [audience],
-          blobs: ["rate_limited", "", "", "rate_limited"],
-          doubles: [0, 0, 0],
-        });
-      } catch {
-        // Observability must not break a request.
-      }
+      record(env, audience, { kind: "rate_limited", outcome: "rate_limited", src: srcTag(request.url) });
       return jsonRpcError(429, -32000, `Rate limit exceeded: ${RATE_LIMIT_PER_MINUTE} requests a minute.`, {
         "Retry-After": "60",
         ...corsHeaders(),
