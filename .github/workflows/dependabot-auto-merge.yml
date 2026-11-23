@@ -1,8 +1,11 @@
-# Per-repo caller. Drop into each repo as .github/workflows/dependabot-auto-merge.yml.
-# All logic lives in storra-eng/agent-automation; see dependabot-auto-merge.yml there.
+# Inlined copy of storra-eng/agent-automation's reusable dependabot-auto-merge.yml, for PUBLIC repos.
+# A public repo cannot call a private repo's reusable workflow: the run fails at startup with no job
+# or log. Keep the job in step with the callee; rollout.sh --dependabot installs this file for public repos.
 #
-# Only safe alongside a ruleset on the default branch that requires CI - without
-# one, auto-merge has nothing to wait for and merges immediately.
+# Queue native auto-merge (squash) on a Dependabot PR when the bump is patch or minor. Majors, and
+# anything fetch-metadata cannot classify, are left for a human. `--auto` only waits for the repo's
+# ruleset on the default branch, so pair this with one (rollout.sh --rulesets).
+# No secrets: GITHUB_TOKEN with the explicit grant below is the documented path.
 
 name: Dependabot auto-merge
 
@@ -12,14 +15,53 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
-# NOT optional - a reusable workflow may only request scopes its caller holds,
-# and a missing block fails at startup with no job, log or check run (see the
-# README gotcha). Keep in step with the callee's `permissions:`.
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  call:
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
-    uses: storra-eng/agent-automation/.github/workflows/dependabot-auto-merge.yml@main
+  auto-merge:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    # Both checks: the PR is Dependabot's, AND Dependabot made the change that
+    # fired this run. A human pushing onto a Dependabot branch makes the actor
+    # the human, and their commit is not something to merge unattended.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Queue auto-merge (patch/minor only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEPS: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          # Allowlist, not a deny-list: an empty or unknown update-type (a grouped
+          # PR fetch-metadata can't classify, a security bump without a semver
+          # step) stays for a human rather than slipping through.
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor) ;;
+            *)
+              echo "::notice::#$PR ($DEPS) is '${UPDATE_TYPE:-unclassified}' - leaving it for a human."
+              exit 0 ;;
+          esac
+          echo "#$PR ($DEPS) is $UPDATE_TYPE - queueing auto-merge."
+          # A PR with nothing left to wait for (no required checks pending) can't
+          # take auto-merge - GitHub rejects it as "clean status" - so merge it
+          # outright - intended for repos with no PR CI, whose gate is resolved
+          # threads only. Where checks are required the PR is BLOCKED, not clean,
+          # until they report. Any other failure is real and fails the job.
+          # Use a merge method the repo allows: squash, then merge commit, then rebase.
+          method=$(gh api "repos/$GH_REPO" --jq 'if .allow_merge_commit == null then error("merge settings not visible to this token") elif .allow_squash_merge then "squash" elif .allow_merge_commit then "merge" else "rebase" end')
+          if out=$(gh pr merge "$PR" --auto "--$method" 2>&1); then echo "$out"; exit 0; fi
+          echo "$out"
+          case "$out" in
+            *"clean status"*) gh pr merge "$PR" "--$method" ;;
+            *) exit 1 ;;
+          esac
