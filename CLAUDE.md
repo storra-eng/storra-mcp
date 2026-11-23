@@ -11,7 +11,8 @@ served at `mcp.getstorra.com/creators` and `/brands`. They answer from the publi
   `detail()` in `src/tools.ts` passes through every field except a short denylist, so it is not the control.
 - Layout: `src/` the servers (vendored by `storra`), `test/` their tests, `plugin/` the Claude Code plugin (marketplace
   at `.claude-plugin/marketplace.json`, source `./plugin`), `examples/agent/` an example agent using the MCP SDK.
-- Each surface tags its own `?src=` slug on the server URL (`plugin`, `agent`, `github` in README links) so Storra can
+- Each surface tags its own `?src=` slug on the server URL (`plugin`, `agent`, `github` in README links, `repo` in the
+  root `.mcp.json`, which exists so directories that only scan the repo root, such as cursor.directory, find the servers) so Storra can
   count its calls. Keep them. Tool names in the plugin skill and the agent come from the live `tools/list`.
 - README is directory listing copy (mcp.pub, Glama, mcpmarket read it): no em dashes, keep URLs and the tool list true.
 

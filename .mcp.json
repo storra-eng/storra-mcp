@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "storra-creators": {
+      "type": "http",
+      "url": "https://mcp.getstorra.com/creators?src=repo"
+    },
+    "storra-brands": {
+      "type": "http",
+      "url": "https://mcp.getstorra.com/brands?src=repo"
+    }
+  }
+}
