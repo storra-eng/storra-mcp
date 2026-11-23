@@ -52,3 +52,10 @@ request. Never commit in the main checkout, never force-push the default branch,
 The hosted servers are deployed from Storra's private repo, which vendors `src/` at a pinned commit. After a change
 lands here, in `storra`: `node scripts/storra-mcp-vendor.mjs sync <commit>`, commit, land, then deploy
 `cloudflare/mcp-proxy` (its README).
+
+## Directory listings
+
+| Directory | How |
+|---|---|
+| LobeHub | `lobehub/{creators,brands}/lhm.plugin.json`. Regenerate after a tool change: `npx -y @lobehub/market-cli plugin init --url 'https://mcp.getstorra.com/<audience>?src=lobehub' --dir lobehub/<audience> --force` (needs a `package.json` with a `description` in that dir while it runs), then keep `identifier` as `storra-<audience>` and the author as Storra. Publish: `lhm login`, `lhm github connect`, then `lhm plugin publish https://github.com/storra-eng/storra-mcp --dir lobehub/<audience>`. |
+| MCP Registry | `server.json` files live in Storra's private repo; Glama lists both servers from the registry. |

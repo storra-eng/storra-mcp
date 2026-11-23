@@ -1,0 +1,97 @@
+{
+  "author": "Storra",
+  "authorUrl": "https://getstorra.com",
+  "cloudEndpoint": "https://mcp.getstorra.com/brands?src=lobehub",
+  "description": "Find real charity stories a brand could fund as a cause-marketing campaign, with what the brand could do. Read-only, no sign-in.",
+  "homepage": "https://getstorra.com/ai",
+  "identifier": "storra-brands",
+  "name": "Storra for Brands",
+  "prompts": [],
+  "resources": [],
+  "tools": [
+    {
+      "name": "find_campaign_stories",
+      "title": "Find campaign stories",
+      "description": "Search real charity stories a brand could fund as a cause-marketing campaign. Matches the query against titles, summaries, charities, causes and places, and returns the best matches with a link to each story page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Words to look for, e.g. \"children Christmas\" or \"mental health\"."
+          },
+          "cause": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Only stories for this cause, e.g. \"Health\". Use list_causes for the values."
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Only stories in this place, e.g. \"Manchester\"."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "description": "How many stories to return (default 10, at most 25)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "title": "Find campaign stories",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_campaign_story",
+      "title": "Get a campaign story",
+      "description": "Get one story in full: the story, what a brand could do with it, and the charity's details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The story's slug, from a search result."
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "title": "Get a campaign story",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_causes",
+      "title": "List causes",
+      "description": "List the causes stories are filed under, with how many stories each has. Use a cause as the filter in a search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "title": "List causes",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "version": "1.0.0"
+}
