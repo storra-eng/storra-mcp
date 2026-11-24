@@ -5,17 +5,21 @@
  * They answer from the public story export on cdn.getstorra.com, so they need no sign-in and no database: every story
  * they return is already public on getstorra.com. Stateless streamable HTTP: a fresh Server and transport per
  * request, JSON responses, no sessions, so nothing is held between requests and any isolate can answer any call.
+ * Built on the official MCP SDK v2 (`@modelcontextprotocol/server`): both protocol revisions are served, the 2025
+ * one (`initialize`) and 2026-07-28 (`server/discover`, no handshake).
  *
- * `serveAnonymous` is the entry point a Worker calls once it has picked the audience from the URL.
+ * `serveAnonymous` is the entry point a Worker calls once it has picked the audience from the URL. Pass
+ * `{ ctx, posthog: { apiKey, host } }` to also send each call to PostHog MCP Analytics; without `posthog`, nothing is
+ * sent anywhere (the standalone worker in this repo passes none).
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+  createMcpHandler,
+  isLegacyRequest,
+  Server,
+  WebStandardStreamableHTTPServerTransport,
+} from "@modelcontextprotocol/server";
+import { instrument, PostHog } from "@posthog/mcp";
 
 import {
   MCP_AUDIENCE_CONFIG,
@@ -75,21 +79,19 @@ function record(env, audience, fields) {
 
 function buildServer(env, audience, src) {
   const config = MCP_AUDIENCE_CONFIG[audience];
+  // On Workers the SDK picks the @cfworker/json-schema validator itself (its `workerd` export): the default one
+  // compiles with `new Function`, which Workers block.
   const server = new Server(
     { name: config.name, title: config.title, version: MCP_SERVER_VERSION },
-    {
-      capabilities: { tools: {} },
-      instructions: config.instructions,
-      jsonSchemaValidator: new CfWorkerJsonSchemaValidator(),
-    },
+    { capabilities: { tools: {} }, instructions: config.instructions },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler("tools/list", async () => {
     record(env, audience, { kind: "tools/list", outcome: "ok", src });
     return { tools: toolDefinitions(audience) };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler("tools/call", async (request) => {
     const started = Date.now();
     const { name, arguments: args } = request.params;
     const invalid = validateCall(audience, name, args);
@@ -149,10 +151,60 @@ function jsonRpcError(status, code, message, headers) {
   );
 }
 
+// Only metadata leaves: the SDK records argument names, never values, and the hook below drops the rest. The servers
+// are anonymous, so events carry no identity and PostHog makes no person for them.
+function redact(event) {
+  if (event.event === "$exception") return null;
+  const p = { ...(event.properties ?? {}) };
+  delete p.$mcp_parameters;
+  delete p.$mcp_response;
+  delete p.$mcp_intent;
+  delete p.$mcp_error_message;
+  return { ...event, properties: p };
+}
+
+function analyticsFor(options) {
+  const cfg = options?.posthog;
+  if (!cfg?.apiKey || !cfg?.host) return null;
+  return new PostHog(cfg.apiKey, { host: cfg.host, flushAt: 20, flushInterval: 0 });
+}
+
+function instrumentServer(server, posthog, audience, src) {
+  try {
+    instrument(server, posthog, {
+      // Tool schemas and results stay exactly as defined: nothing injected, nothing appended.
+      context: false,
+      captureModel: false,
+      enableConversationId: false,
+      enableExceptionAutocapture: false,
+      eventProperties: () => ({ storra_audience: audience, storra_src: src || null }),
+      beforeSend: redact,
+    });
+  } catch (e) {
+    console.error("[mcp-analytics] instrument failed", e);
+  }
+}
+
+// Flushes once the response body has been sent: the SDK records a call when its result is written.
+function flushAfter(response, posthog, ctx) {
+  if (!posthog) return response;
+  let done;
+  const closed = new Promise((r) => (done = r));
+  const body = response.body
+    ? response.body.pipeThrough(new TransformStream({ flush: () => done(), cancel: () => done() }))
+    : (done(), null);
+  const flush = closed
+    .then(() => new Promise((r) => setTimeout(r, 0)))
+    .then(() => posthog.shutdown())
+    .catch((e) => console.error("[mcp-analytics] flush failed", e));
+  ctx?.waitUntil?.(flush);
+  return new Response(body, response);
+}
+
 /**
  * Answers one MCP request for `audience`. `request` is already past routing and rate limiting.
  */
-export async function handleAnonymousMcp(request, env, audience, cors) {
+export async function handleAnonymousMcp(request, env, audience, cors, options = {}) {
   if (request.method !== "POST") {
     // No standalone SSE stream and no session to delete: this server is stateless.
     return jsonRpcError(405, -32000, "Method not allowed: POST JSON-RPC requests to this URL.", {
@@ -161,17 +213,39 @@ export async function handleAnonymousMcp(request, env, audience, cors) {
     });
   }
 
-  const server = buildServer(env, audience, srcTag(request.url));
-  const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-  await server.connect(transport);
-  const response = await transport.handleRequest(request);
+  const src = srcTag(request.url);
+  const posthog = analyticsFor(options);
+  const factory = () => {
+    const server = buildServer(env, audience, src);
+    if (posthog) instrumentServer(server, posthog, audience, src);
+    return server;
+  };
+
+  let parsedBody;
+  try {
+    parsedBody = await request.clone().json();
+  } catch {
+    parsedBody = undefined;
+  }
+  let response;
+  if (parsedBody !== undefined && (await isLegacyRequest(request, parsedBody))) {
+    // 2025-era traffic keeps the JSON responses it has always had (the SDK's own legacy leg streams SSE).
+    const transport = new WebStandardStreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: true,
+    });
+    await factory().connect(transport);
+    response = await transport.handleRequest(request, { parsedBody });
+  } else {
+    // 2026-07-28: no listChanged, so refuse `subscriptions/listen` rather than hold the request open.
+    response = await createMcpHandler(factory, { responseMode: "json", maxSubscriptions: 0 }).fetch(request, {
+      parsedBody,
+    });
+  }
   const out = new Response(response.body, response);
   out.headers.set("Cache-Control", "no-store");
   for (const [name, value] of Object.entries(cors)) out.headers.set(name, value);
-  return out;
+  return flushAfter(out, posthog, options.ctx);
 }
 
 export const RATE_LIMIT_PER_MINUTE = 60;
@@ -184,7 +258,8 @@ export function corsHeaders() {
     // `last-event-id` is how a browser client resumes a broken streamable-HTTP SSE stream, and it is not on the CORS
     // safelist, so omitting it fails the preflight.
     "Access-Control-Allow-Headers":
-      "authorization, content-type, mcp-session-id, mcp-protocol-version, accept, last-event-id",
+      // `mcp-method` and `mcp-name` are sent on every 2026-07-28 request.
+      "authorization, content-type, mcp-session-id, mcp-protocol-version, mcp-method, mcp-name, accept, last-event-id",
     "Access-Control-Expose-Headers": "WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version",
     "Access-Control-Max-Age": "86400",
   };
@@ -195,7 +270,7 @@ export function corsHeaders() {
  * (60 requests a minute in production); without it, nothing is limited. An in-memory counter would be per isolate
  * and limit nothing.
  */
-export async function serveAnonymous(request, env, audience) {
+export async function serveAnonymous(request, env, audience, options = {}) {
   if (env.MCP_LIMITER) {
     const key = request.headers.get("cf-connecting-ip") || "unknown";
     const { success } = await env.MCP_LIMITER.limit({ key });
@@ -207,5 +282,5 @@ export async function serveAnonymous(request, env, audience) {
       });
     }
   }
-  return handleAnonymousMcp(request, env, audience, corsHeaders());
+  return handleAnonymousMcp(request, env, audience, corsHeaders(), options);
 }
