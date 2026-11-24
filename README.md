@@ -94,11 +94,11 @@ Every tool is read-only (`readOnlyHint: true`, `destructiveHint: false`) and has
 
 | Server | Tool | What it does |
 |---|---|---|
-| Creators | `search_stories_to_tell` | Search stories by words, cause, place or category. Returns the best matches with a link to each story page. |
+| Creators | `search_stories_to_tell` | Search stories by words, cause, place, category or country (`UK` or `US`). Returns the best matches with a link to each story page. |
 | Creators | `get_story` | One story in full: the story, where you could take it, the support on offer, and the charity's details. |
-| Brands | `find_campaign_stories` | Search stories by words, cause or place. Returns the best matches with a link to each story page. |
+| Brands | `find_campaign_stories` | Search stories by words, cause, place or country (`UK` or `US`). Returns the best matches with a link to each story page. |
 | Brands | `get_campaign_story` | One story in full: the story, what a brand could do with it, and the charity's details. |
-| Both | `list_causes` | The causes stories are filed under, with how many stories each has. |
+| Both | `list_causes` | The causes stories are filed under, with how many stories each has, optionally for one country. |
 
 Search results return at most 25 stories (10 by default).
 

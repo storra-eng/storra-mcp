@@ -230,6 +230,102 @@ describe("runTool", () => {
     ]);
   });
 
+  describe("country", () => {
+    const withUs = () => {
+      const feed = feedFor("creators");
+      feed.stories.push({
+        slug: "us-shelter",
+        card_title: "A shelter in Austin",
+        cause: "Animals",
+        location: "Austin",
+        country: "US",
+      });
+      return feed;
+    };
+    const search = (args: Record<string, unknown>) => {
+      const out = runTool("creators", "search_stories_to_tell", args, withUs());
+      if (!out.ok) throw new Error(out.message);
+      return (out.result as { stories: { slug: string; country: string }[] })
+        .stories;
+    };
+
+    it("returns every country by default, each labelled; missing means GB", () => {
+      const stories = search({});
+      expect(stories.map((s) => [s.slug, s.country])).toEqual([
+        ["food-bank", "GB"],
+        ["dog-rescue", "GB"],
+        ["kids-choir", "GB"],
+        ["us-shelter", "US"],
+      ]);
+    });
+
+    it("filters to US", () => {
+      expect(search({ country: "US" }).map((s) => s.slug)).toEqual([
+        "us-shelter",
+      ]);
+    });
+
+    it("treats UK and GB alike, and excludes US", () => {
+      const uk = search({ country: "UK" }).map((s) => s.slug);
+      expect(uk).toEqual(search({ country: "GB" }).map((s) => s.slug));
+      expect(uk).not.toContain("us-shelter");
+      expect(uk).toHaveLength(3);
+    });
+
+    it("returns zero US stories when the feed has none", () => {
+      const out = runTool(
+        "brands",
+        "find_campaign_stories",
+        { country: "US" },
+        feedFor("brands"),
+      );
+      expect(out.ok && (out.result as { stories: unknown[] }).stories).toEqual(
+        [],
+      );
+    });
+
+    it("scopes list_causes counts", () => {
+      const causes = (country?: string) => {
+        const out = runTool(
+          "creators",
+          "list_causes",
+          country ? { country } : {},
+          withUs(),
+        );
+        return out.ok && (out.result as { causes: unknown[] }).causes;
+      };
+      expect(causes("US")).toEqual([{ cause: "Animals", stories: 1 }]);
+      expect(causes("UK")).toHaveLength(3);
+      expect(causes()).toContainEqual({ cause: "Animals", stories: 2 });
+    });
+
+    it("get resolves a US story by slug and labels it", () => {
+      const out = runTool(
+        "creators",
+        "get_story",
+        { slug: "us-shelter" },
+        withUs(),
+      );
+      expect(out.ok && out.result).toMatchObject({ country: "US" });
+      const gb = runTool(
+        "creators",
+        "get_story",
+        { slug: "food-bank" },
+        withUs(),
+      );
+      expect(gb.ok && gb.result).toMatchObject({ country: "GB" });
+    });
+
+    it("rejects an unknown country", () => {
+      expect(
+        validateCall("creators", "search_stories_to_tell", { country: "FR" }),
+      ).toMatch(/one of UK, GB, US/);
+      expect(
+        validateCall("brands", "list_causes", { country: "US" }),
+      ).toBeNull();
+    });
+  });
+
   it("rejects bad calls before touching a feed", () => {
     expect(validateCall("brands", "search_stories_to_tell", {})).toMatch(
       /Unknown tool/,

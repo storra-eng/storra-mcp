@@ -49,6 +49,13 @@ const limitProperty = {
   description: `How many stories to return (default ${DEFAULT_LIMIT}, at most ${MAX_LIMIT}).`,
 };
 
+const countryProperty = {
+  type: "string",
+  enum: ["UK", "GB", "US"],
+  description:
+    'Only stories in this country: "UK" (same as "GB") or "US". Omit for every country. Each result says which country it is in.',
+};
+
 const slugProperty = {
   type: "string",
   minLength: 1,
@@ -91,6 +98,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
                 maxLength: 100,
                 description: "Only stories in this category.",
               },
+              country: countryProperty,
               limit: limitProperty,
             },
             additionalProperties: false,
@@ -122,6 +130,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
                 maxLength: 100,
                 description: 'Only stories in this place, e.g. "Manchester".',
               },
+              country: countryProperty,
               limit: limitProperty,
             },
             additionalProperties: false,
@@ -151,10 +160,10 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
     name: "list_causes",
     title: "List causes",
     description:
-      "List the causes stories are filed under, with how many stories each has. Use a cause as the filter in a search.",
+      "List the causes stories are filed under, with how many stories each has, optionally for one country. Use a cause as the filter in a search.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: { country: countryProperty },
       additionalProperties: false,
     },
     annotations: readOnly("List causes"),
@@ -242,6 +251,17 @@ function score(story: FeedStory, words: string[]): number {
   return total;
 }
 
+/** A story's country as "GB" or "US"; an export written before the field existed carries none, which means GB. */
+export function storyCountry(story: FeedStory): "GB" | "US" {
+  return str(story.country).toUpperCase() === "US" ? "US" : "GB";
+}
+
+/** The country a call asked for ("UK" is "GB"), or null for every country. */
+function countryFilter(args: Record<string, unknown>): "GB" | "US" | null {
+  const c = str(args.country).toUpperCase();
+  return c === "US" ? "US" : c === "UK" || c === "GB" ? "GB" : null;
+}
+
 const includesCI = (haystack: string, needle: string) =>
   haystack.toLowerCase().includes(needle.toLowerCase());
 
@@ -257,6 +277,7 @@ export function summarise(audience: McpAudience, story: FeedStory) {
     location: str(story.location) || str(story.charity_location) || null,
     charity: str(story.charity_name) || null,
     event_date: str(story.event_date) || null,
+    country: storyCountry(story),
   };
 }
 
@@ -283,6 +304,7 @@ function detail(audience: McpAudience, story: FeedStory) {
     if (NOISE.has(key) || value === null || value === "") continue;
     out[key] = value;
   }
+  out.country = storyCountry(story);
   return out;
 }
 
@@ -301,7 +323,13 @@ function checkArgs(
 ): string | null {
   const props = def.inputSchema.properties as Record<
     string,
-    { type: string; maxLength?: number; minimum?: number; maximum?: number }
+    {
+      type: string;
+      maxLength?: number;
+      minimum?: number;
+      maximum?: number;
+      enum?: string[];
+    }
   >;
   for (const key of Object.keys(args)) {
     if (!(key in props)) return `Unknown argument "${key}".`;
@@ -316,6 +344,8 @@ function checkArgs(
       if (typeof value !== "string") return `"${key}" must be a string.`;
       if (spec.maxLength && value.length > spec.maxLength)
         return `"${key}" is too long (at most ${spec.maxLength} characters).`;
+      if (spec.enum && !spec.enum.includes(value))
+        return `"${key}" must be one of ${spec.enum.join(", ")}.`;
     } else if (spec.type === "integer") {
       if (typeof value !== "number" || !Number.isInteger(value))
         return `"${key}" must be an integer.`;
@@ -364,8 +394,10 @@ export function runTool(
     const location = str(args.location).trim();
     const category = str(args.category).trim();
     const limit = clampLimit(args.limit);
+    const country = countryFilter(args);
     const hits: { story: FeedStory; points: number }[] = [];
     for (const story of feed.stories) {
+      if (country && storyCountry(story) !== country) continue;
       if (cause && !includesCI(str(story.cause), cause)) continue;
       if (
         location &&
@@ -420,7 +452,9 @@ export function runTool(
 
   // list_causes
   const counts = new Map<string, number>();
+  const country = countryFilter(args);
   for (const story of feed.stories) {
+    if (country && storyCountry(story) !== country) continue;
     const cause = str(story.cause);
     if (cause) counts.set(cause, (counts.get(cause) ?? 0) + 1);
   }
