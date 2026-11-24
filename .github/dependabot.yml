@@ -27,6 +27,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -41,6 +42,7 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /examples/agent
     schedule:
@@ -55,3 +57,4 @@ updates:
     groups:
       npm-agent:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
