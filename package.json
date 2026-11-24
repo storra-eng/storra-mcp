@@ -2,7 +2,7 @@
   "name": "storra-mcp",
   "version": "1.0.0",
   "private": true,
-  "description": "Storra's anonymous MCP servers: search real charity stories a creator could tell or a brand could fund. Read-only, no sign-in.",
+  "description": "Storra's anonymous MCP servers: search real charity stories a creator could tell or a brand could fund. Read-only, no sign-in. UK stories only for now.",
   "license": "MIT",
   "type": "module",
   "repository": {

@@ -1,6 +1,6 @@
 {
   "name": "storra",
-  "description": "Find real charity stories for a brand to fund or a creator to tell, using Storra's public MCP servers.",
+  "description": "Find real charity stories for a brand to fund or a creator to tell, using Storra's public MCP servers. UK stories only for now.",
   "homepage": "https://getstorra.com/ai",
   "repository": "https://github.com/storra-eng/storra-mcp",
   "author": {
