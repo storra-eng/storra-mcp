@@ -190,9 +190,17 @@ export function redactMcpEvent(event) {
 }
 
 // A client must keep a Worker alive for the flush, so analytics need `ctx.waitUntil`.
+let warnedNoWaitUntil = false;
 function analyticsFor(options) {
   const cfg = options?.posthog;
-  if (!cfg?.apiKey || !cfg?.host || typeof options?.ctx?.waitUntil !== "function") return null;
+  if (!cfg?.apiKey || !cfg?.host) return null;
+  if (typeof options?.ctx?.waitUntil !== "function") {
+    if (!warnedNoWaitUntil) {
+      warnedNoWaitUntil = true;
+      console.warn("[mcp-analytics] posthog is configured but ctx.waitUntil is missing: no events are sent");
+    }
+    return null;
+  }
   return new PostHog(cfg.apiKey, { host: cfg.host, flushAt: 20, flushInterval: 0 });
 }
 
@@ -212,23 +220,22 @@ function instrumentServer(server, posthog, audience, src) {
   }
 }
 
-// Flushes once the response body has been sent, since the SDK records a call when its result is written; and after
-// 30 s regardless, for a client that drops the connection without the stream closing or cancelling.
-function flushAfter(response, posthog, ctx) {
-  if (!posthog) return response;
+// Runs `onClosed`, then flushes, once the response body has been sent (the SDK records a call when its result is
+// written) or the client goes away (the request's abort signal). Every reply here is JSON, so the body is complete
+// when the response is returned; there is no timer to clear.
+function afterResponse(response, { posthog, ctx, signal, onClosed }) {
+  if (!posthog && !onClosed) return response;
   let done;
-  const closed = new Promise((r) => {
-    done = r;
-    setTimeout(r, 30_000);
-  });
+  const closed = new Promise((r) => (done = r));
+  signal?.addEventListener("abort", () => done(), { once: true });
   const body = response.body
     ? response.body.pipeThrough(new TransformStream({ flush: () => done(), cancel: () => done() }))
     : (done(), null);
-  const flush = closed
-    .then(() => new Promise((r) => setTimeout(r, 0)))
-    .then(() => posthog.shutdown())
+  const finished = closed
+    .then(() => onClosed?.())
+    .then(() => (posthog ? new Promise((r) => setTimeout(r, 0)).then(() => posthog.shutdown()) : undefined))
     .catch((e) => console.error("[mcp-analytics] flush failed", e));
-  ctx.waitUntil(flush);
+  ctx?.waitUntil?.(finished);
   return new Response(body, response);
 }
 
@@ -283,6 +290,7 @@ export async function handleAnonymousMcp(request, env, audience, cors, options =
   };
 
   let response;
+  let onClosed;
   // The SDK's own rule: an empty or unparseable body is 2025-era too, so its parse error comes back as JSON as well.
   if (await isLegacyRequest(request, parsedBody)) {
     // 2025-era traffic keeps the JSON responses it has always had (the SDK's own legacy leg streams SSE).
@@ -290,8 +298,14 @@ export async function handleAnonymousMcp(request, env, audience, cors, options =
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
-    await factory().connect(transport);
+    const server = factory();
+    await server.connect(transport);
     response = await transport.handleRequest(request, parsedBody === undefined ? {} : { parsedBody });
+    // Torn down once the reply is sent, as the SDK's own stateless fallback does.
+    onClosed = () => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    };
   } else {
     perRequest.set(request, factory);
     response = await modernHandler(audience).fetch(request, { parsedBody });
@@ -299,7 +313,7 @@ export async function handleAnonymousMcp(request, env, audience, cors, options =
   const out = new Response(response.body, response);
   out.headers.set("Cache-Control", "no-store");
   for (const [name, value] of Object.entries(cors)) out.headers.set(name, value);
-  return flushAfter(out, posthog, options.ctx);
+  return afterResponse(out, { posthog, ctx: options.ctx, signal: request.signal, onClosed });
 }
 
 export const RATE_LIMIT_PER_MINUTE = 60;
