@@ -50,6 +50,31 @@ describe("protocol revisions", () => {
   });
 });
 
+describe("request bodies", () => {
+  const send = (body: string) =>
+    serveAnonymous(
+      new Request(`${ORIGIN}/creators`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+        body,
+      }),
+      {},
+      "creators",
+    );
+
+  it("answers malformed JSON with a JSON parse error", async () => {
+    const res = await send("{bad");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect((await res.json()).error.code).toBe(-32700);
+  });
+
+  it("refuses a body over 4 MiB before parsing it", async () => {
+    const res = await send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: { pad: "x".repeat(5 * 1024 * 1024) } }));
+    expect(res.status).toBe(413);
+  });
+});
+
 describe("PostHog MCP Analytics", () => {
   it("sends nothing without a posthog option", async () => {
     const captured: { event: string }[] = [];
@@ -64,6 +89,30 @@ describe("PostHog MCP Analytics", () => {
     } finally {
       restore();
     }
+  });
+
+  it.each([["legacy"], ["2026-07-28"]])("on the %s revision, sends no argument value", async (era) => {
+    const captured: { event: string; properties: Record<string, unknown> }[] = [];
+    const pending: Promise<unknown>[] = [];
+    const options = {
+      posthog: { apiKey: "phc_test", host: "https://posthog.test" },
+      ctx: { waitUntil: (p: Promise<unknown>) => pending.push(p) },
+    };
+    const restore = patchFetch(options, captured);
+    try {
+      const client = new Client(
+        { name: "test-client", version: "1" },
+        era === "legacy" ? {} : { versionNegotiation: { mode: { pin: "2026-07-28" } } },
+      );
+      await client.connect(new StreamableHTTPClientTransport(new URL(`${ORIGIN}/brands`)));
+      await client.callTool({ name: "get_campaign_story", arguments: { slug: "zz-sentinel-term-qq" } });
+      await client.close();
+      await Promise.all(pending);
+    } finally {
+      restore();
+    }
+    expect(captured.some((e) => e.event === "$mcp_tool_call")).toBe(true);
+    expect(JSON.stringify(captured)).not.toContain("zz-sentinel-term-qq");
   });
 
   it("sends redacted, anonymous events tagged with the audience and ?src=", async () => {

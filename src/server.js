@@ -15,7 +15,9 @@
 
 import {
   createMcpHandler,
+  DEFAULT_MAX_REQUEST_BODY_SIZE,
   isLegacyRequest,
+  readRequestBody,
   Server,
   WebStandardStreamableHTTPServerTransport,
 } from "@modelcontextprotocol/server";
@@ -151,21 +153,46 @@ function jsonRpcError(status, code, message, headers) {
   );
 }
 
-// Only metadata leaves: the SDK records argument names, never values, and the hook below drops the rest. The servers
-// are anonymous, so events carry no identity and PostHog makes no person for them.
-function redact(event) {
+// Only metadata leaves. Of the SDK's `$mcp_*` properties, only these are sent, so arguments, results, intent, error
+// text and anything a later SDK release adds are dropped. Other keys (posthog-node's `$lib`, our `storra_*`) pass.
+// The servers are anonymous, so events carry no identity and PostHog makes no person for them.
+const MCP_PROPERTY_ALLOWLIST = new Set([
+  "$mcp_client_name",
+  "$mcp_client_version",
+  "$mcp_client_user_agent",
+  "$mcp_duration_ms",
+  "$mcp_error_status",
+  "$mcp_error_type",
+  "$mcp_interface",
+  "$mcp_is_error",
+  "$mcp_input_keys",
+  "$mcp_listed_tool_names",
+  "$mcp_protocol_version",
+  "$mcp_resource_name",
+  "$mcp_server_build",
+  "$mcp_server_name",
+  "$mcp_server_version",
+  "$mcp_session_source",
+  "$mcp_source",
+  "$mcp_tool_category",
+  "$mcp_tool_description",
+  "$mcp_tool_name",
+  "$mcp_vendor_client",
+]);
+
+export function redactMcpEvent(event) {
   if (event.event === "$exception") return null;
-  const p = { ...(event.properties ?? {}) };
-  delete p.$mcp_parameters;
-  delete p.$mcp_response;
-  delete p.$mcp_intent;
-  delete p.$mcp_error_message;
-  return { ...event, properties: p };
+  const properties = {};
+  for (const [k, v] of Object.entries(event.properties ?? {})) {
+    if (!k.startsWith("$mcp_") || MCP_PROPERTY_ALLOWLIST.has(k)) properties[k] = v;
+  }
+  return { ...event, properties };
 }
 
+// A client must keep a Worker alive for the flush, so analytics need `ctx.waitUntil`.
 function analyticsFor(options) {
   const cfg = options?.posthog;
-  if (!cfg?.apiKey || !cfg?.host) return null;
+  if (!cfg?.apiKey || !cfg?.host || typeof options?.ctx?.waitUntil !== "function") return null;
   return new PostHog(cfg.apiKey, { host: cfg.host, flushAt: 20, flushInterval: 0 });
 }
 
@@ -178,18 +205,22 @@ function instrumentServer(server, posthog, audience, src) {
       enableConversationId: false,
       enableExceptionAutocapture: false,
       eventProperties: () => ({ storra_audience: audience, storra_src: src || null }),
-      beforeSend: redact,
+      beforeSend: redactMcpEvent,
     });
   } catch (e) {
     console.error("[mcp-analytics] instrument failed", e);
   }
 }
 
-// Flushes once the response body has been sent: the SDK records a call when its result is written.
+// Flushes once the response body has been sent, since the SDK records a call when its result is written; and after
+// 30 s regardless, for a client that drops the connection without the stream closing or cancelling.
 function flushAfter(response, posthog, ctx) {
   if (!posthog) return response;
   let done;
-  const closed = new Promise((r) => (done = r));
+  const closed = new Promise((r) => {
+    done = r;
+    setTimeout(r, 30_000);
+  });
   const body = response.body
     ? response.body.pipeThrough(new TransformStream({ flush: () => done(), cancel: () => done() }))
     : (done(), null);
@@ -197,8 +228,27 @@ function flushAfter(response, posthog, ctx) {
     .then(() => new Promise((r) => setTimeout(r, 0)))
     .then(() => posthog.shutdown())
     .catch((e) => console.error("[mcp-analytics] flush failed", e));
-  ctx?.waitUntil?.(flush);
+  ctx.waitUntil(flush);
   return new Response(body, response);
+}
+
+// With analytics on, @posthog/mcp puts a session token in the `initialize` reply's Mcp-Session-Id header and reads it
+// back from later requests, so a 2025 client's calls group into one PostHog session. It is an analytics label, not a
+// server session (nothing is held), and a client can forge it, so its client name is self-reported.
+
+// One request's state, looked up by the server factory: the handler for the 2026-07-28 revision is built once per
+// audience, and the SDK hands the factory the Request it was given.
+const perRequest = new WeakMap();
+const modernHandlers = new Map();
+
+function modernHandler(audience) {
+  let handler = modernHandlers.get(audience);
+  if (!handler) {
+    // No listChanged, so `subscriptions/listen` is refused rather than held open.
+    handler = createMcpHandler((ctx) => perRequest.get(ctx.requestInfo)(), { responseMode: "json", maxSubscriptions: 0 });
+    modernHandlers.set(audience, handler);
+  }
+  return handler;
 }
 
 /**
@@ -213,6 +263,17 @@ export async function handleAnonymousMcp(request, env, audience, cors, options =
     });
   }
 
+  const read = await readRequestBody(request.clone(), DEFAULT_MAX_REQUEST_BODY_SIZE);
+  if (read.tooLarge) {
+    return jsonRpcError(413, -32600, "Request body too large.", cors);
+  }
+  let parsedBody;
+  try {
+    parsedBody = JSON.parse(read.text);
+  } catch {
+    parsedBody = undefined;
+  }
+
   const src = srcTag(request.url);
   const posthog = analyticsFor(options);
   const factory = () => {
@@ -221,26 +282,19 @@ export async function handleAnonymousMcp(request, env, audience, cors, options =
     return server;
   };
 
-  let parsedBody;
-  try {
-    parsedBody = await request.clone().json();
-  } catch {
-    parsedBody = undefined;
-  }
   let response;
-  if (parsedBody !== undefined && (await isLegacyRequest(request, parsedBody))) {
+  // The SDK's own rule: an empty or unparseable body is 2025-era too, so its parse error comes back as JSON as well.
+  if (await isLegacyRequest(request, parsedBody)) {
     // 2025-era traffic keeps the JSON responses it has always had (the SDK's own legacy leg streams SSE).
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
     await factory().connect(transport);
-    response = await transport.handleRequest(request, { parsedBody });
+    response = await transport.handleRequest(request, parsedBody === undefined ? {} : { parsedBody });
   } else {
-    // 2026-07-28: no listChanged, so refuse `subscriptions/listen` rather than hold the request open.
-    response = await createMcpHandler(factory, { responseMode: "json", maxSubscriptions: 0 }).fetch(request, {
-      parsedBody,
-    });
+    perRequest.set(request, factory);
+    response = await modernHandler(audience).fetch(request, { parsedBody });
   }
   const out = new Response(response.body, response);
   out.headers.set("Cache-Control", "no-store");
