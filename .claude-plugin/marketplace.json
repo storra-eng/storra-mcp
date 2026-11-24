@@ -5,13 +5,13 @@
     "url": "https://getstorra.com"
   },
   "metadata": {
-    "description": "Storra's public MCP servers and a skill for finding charity stories (UK stories only for now)."
+    "description": "Storra's public MCP servers and a skill for finding charity stories."
   },
   "plugins": [
     {
       "name": "storra",
       "source": "./plugin",
-      "description": "Find real charity stories for a brand to fund or a creator to tell. Adds the Storra creators and brands MCP servers and a cause-campaign skill. UK stories only for now.",
+      "description": "Find real charity stories for a brand to fund or a creator to tell. Adds the Storra creators and brands MCP servers and a cause-campaign skill.",
       "category": "marketing"
     }
   ]

@@ -10,7 +10,6 @@ Find real charity stories for a creator to tell or a brand to fund, from any AI 
 [Storra](https://getstorra.com) lists real charity stories that brands fund, creators tell and charities make real.
 These two servers let an assistant search those stories and read one in full, with a link to its page.
 
-- **UK stories only for now.** Other countries are coming soon - email [socials@getstorra.com](mailto:socials@getstorra.com) if you want stories from another country.
 - **Free, read-only, no sign-in.** Every story they return is already public on getstorra.com.
 - **Hosted for you.** Add a URL below; there is nothing to install or run.
 - Setup for every assistant: [getstorra.com/ai](https://getstorra.com/ai).

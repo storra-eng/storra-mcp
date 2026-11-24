@@ -65,7 +65,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
           name: c.searchTool,
           title: "Search stories to tell",
           description:
-            "Search real charity stories a creator could make a video or post about. Matches the query against titles, summaries, charities, causes and places, and returns the best matches with a link to each story page. Currently UK stories only. Other countries are coming soon - email socials@getstorra.com if you want stories from another country.",
+            "Search real charity stories a creator could make a video or post about. Matches the query against titles, summaries, charities, causes and places, and returns the best matches with a link to each story page.",
           inputSchema: {
             type: "object",
             properties: {
@@ -84,8 +84,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
               location: {
                 type: "string",
                 maxLength: 100,
-                description:
-                  'Only stories in this place, e.g. "Manchester". Stories are UK only for now.',
+                description: 'Only stories in this place, e.g. "Manchester".',
               },
               category: {
                 type: "string",
@@ -102,7 +101,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
           name: c.searchTool,
           title: "Find campaign stories",
           description:
-            "Search real charity stories a brand could fund as a cause-marketing campaign. Matches the query against titles, summaries, charities, causes and places, and returns the best matches with a link to each story page. Currently UK stories only. Other countries are coming soon - email socials@getstorra.com if you want stories from another country.",
+            "Search real charity stories a brand could fund as a cause-marketing campaign. Matches the query against titles, summaries, charities, causes and places, and returns the best matches with a link to each story page.",
           inputSchema: {
             type: "object",
             properties: {
@@ -121,8 +120,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
               location: {
                 type: "string",
                 maxLength: 100,
-                description:
-                  'Only stories in this place, e.g. "Manchester". Stories are UK only for now.',
+                description: 'Only stories in this place, e.g. "Manchester".',
               },
               limit: limitProperty,
             },
@@ -153,7 +151,7 @@ export function toolDefinitions(audience: McpAudience): ToolDefinition[] {
     name: "list_causes",
     title: "List causes",
     description:
-      "List the causes stories are filed under, with how many stories each has. Use a cause as the filter in a search. Currently UK stories only.",
+      "List the causes stories are filed under, with how many stories each has. Use a cause as the filter in a search.",
     inputSchema: {
       type: "object",
       properties: {},

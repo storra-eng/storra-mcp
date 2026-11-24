@@ -408,27 +408,3 @@ describe("loadFeed", () => {
     ).rejects.toThrow(/unexpected shape/);
   });
 });
-
-describe("coverage wording", () => {
-  it("says UK only, coming soon elsewhere, with the contact address", () => {
-    for (const audience of MCP_AUDIENCES) {
-      const search = toolDefinitions(audience).find(
-        (t) => t.name === MCP_AUDIENCE_CONFIG[audience].searchTool,
-      )!;
-      for (const text of [
-        search.description,
-        MCP_AUDIENCE_CONFIG[audience].instructions,
-      ]) {
-        expect(text).toContain("UK stories only");
-        expect(text).toContain("coming soon");
-        expect(text).toContain("socials@getstorra.com");
-      }
-      const props = search.inputSchema.properties as Record<
-        string,
-        { enum?: unknown }
-      >;
-      expect(props.country).toBeUndefined();
-      expect(props.region).toBeUndefined();
-    }
-  });
-});

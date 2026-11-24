@@ -40,7 +40,7 @@ export const MCP_AUDIENCE_CONFIG: Record<McpAudience, McpAudienceConfig> = {
     description:
       "Find real charity stories a creator could make a video or post about, with the brief and the support on offer. Read-only, no sign-in.",
     instructions:
-      "Storra lists real charity stories that brands can fund and creators can tell. Use search_stories_to_tell to find stories by topic, cause or place, then get_story for the full brief. Always link the user to the story's url. Currently UK stories only. Other countries are coming soon - email socials@getstorra.com if you want stories from another country.",
+      "Storra lists real charity stories that brands can fund and creators can tell. Use search_stories_to_tell to find stories by topic, cause or place, then get_story for the full brief. Always link the user to the story's url.",
     storyPath: "/creators/story-listings",
     feedFile: "creators.json",
     searchTool: "search_stories_to_tell",
@@ -54,7 +54,7 @@ export const MCP_AUDIENCE_CONFIG: Record<McpAudience, McpAudienceConfig> = {
     description:
       "Find real charity stories a brand could fund as a cause-marketing campaign, with what the brand could do. Read-only, no sign-in.",
     instructions:
-      "Storra lists real charity stories that a brand can fund and a creator then tells. Use find_campaign_stories to find stories by topic, cause or place, then get_campaign_story for the full detail. Always link the user to the story's url. Currently UK stories only. Other countries are coming soon - email socials@getstorra.com if you want stories from another country.",
+      "Storra lists real charity stories that a brand can fund and a creator then tells. Use find_campaign_stories to find stories by topic, cause or place, then get_campaign_story for the full detail. Always link the user to the story's url.",
     storyPath: "/brands/story-listings",
     feedFile: "brands.json",
     searchTool: "find_campaign_stories",
