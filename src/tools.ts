@@ -251,15 +251,28 @@ function score(story: FeedStory, words: string[]): number {
   return total;
 }
 
-/** A story's country as "GB" or "US"; an export written before the field existed carries none, which means GB. */
-export function storyCountry(story: FeedStory): "GB" | "US" {
-  return str(story.country).toUpperCase() === "US" ? "US" : "GB";
+const COUNTRY_ALIASES: Record<string, string> = {
+  UK: "GB",
+  GB: "GB",
+  "UNITED KINGDOM": "GB",
+  US: "US",
+  USA: "US",
+  "UNITED STATES": "US",
+};
+
+/**
+ * A story's country: "GB" or "US", or the export's own code if it is something else. An export written before the field
+ * existed carries none, which means GB.
+ */
+export function storyCountry(story: FeedStory): string {
+  const raw = str(story.country).trim().toUpperCase();
+  return raw ? (COUNTRY_ALIASES[raw] ?? raw) : "GB";
 }
 
-/** The country a call asked for ("UK" is "GB"), or null for every country. */
-function countryFilter(args: Record<string, unknown>): "GB" | "US" | null {
-  const c = str(args.country).toUpperCase();
-  return c === "US" ? "US" : c === "UK" || c === "GB" ? "GB" : null;
+/** The country a call asked for ("UK" is "GB", any case), or null for every country. */
+function countryFilter(args: Record<string, unknown>): string | null {
+  const c = str(args.country).trim().toUpperCase();
+  return c ? (COUNTRY_ALIASES[c] ?? null) : null;
 }
 
 const includesCI = (haystack: string, needle: string) =>
@@ -344,7 +357,7 @@ function checkArgs(
       if (typeof value !== "string") return `"${key}" must be a string.`;
       if (spec.maxLength && value.length > spec.maxLength)
         return `"${key}" is too long (at most ${spec.maxLength} characters).`;
-      if (spec.enum && !spec.enum.includes(value))
+      if (spec.enum && !spec.enum.includes(value.toUpperCase()))
         return `"${key}" must be one of ${spec.enum.join(", ")}.`;
     } else if (spec.type === "integer") {
       if (typeof value !== "number" || !Number.isInteger(value))

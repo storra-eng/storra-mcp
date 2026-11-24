@@ -316,6 +316,30 @@ describe("runTool", () => {
       expect(gb.ok && gb.result).toMatchObject({ country: "GB" });
     });
 
+    it("normalises aliases and case, and keeps other countries out of UK and US", () => {
+      const feed = withUs();
+      feed.stories.push(
+        { slug: "a", card_title: "A", country: " usa " },
+        { slug: "b", card_title: "B", country: "IE" },
+      );
+      const slugs = (country: string) => {
+        const out = runTool(
+          "creators",
+          "search_stories_to_tell",
+          { country },
+          feed,
+        );
+        return out.ok
+          ? (out.result as { stories: { slug: string }[] }).stories.map(
+              (s) => s.slug,
+            )
+          : [];
+      };
+      expect(slugs("us")).toEqual(["us-shelter", "a"]);
+      expect(slugs("uk")).toHaveLength(3);
+      expect(slugs("uk")).not.toContain("b");
+    });
+
     it("rejects an unknown country", () => {
       expect(
         validateCall("creators", "search_stories_to_tell", { country: "FR" }),
